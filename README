@@ -61,9 +61,35 @@ front-backend/
 │
 └── README.md
 
-#
+################################# JenkinsFile Pipeline #########################################################
 
-
+Checkout
+   ↓
+Clean Package
+   ├── Frontend
+   │    ├── rm -rf node_modules build
+   │    ├── npm ci
+   │    └── npm run build
+   │
+   └── Backend
+        ├── go clean
+        ├── go mod download
+        ├── go test ./...
+        └── go build
+   ↓
+Docker Build
+   ↓
+Trivy Scan
+   ↓
+ECR Login
+   ↓
+Push Images
+   ↓
+Deploy to EKS
+   ↓
+Update Images
+   ↓
+Verify Deployment
 
 
 
