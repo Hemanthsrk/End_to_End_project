@@ -63,32 +63,51 @@ front-backend/
 
 ################################# JenkinsFile Pipeline #########################################################
 
-Checkout
-   ↓
-Clean Package
-   ├── Frontend
-   │    ├── rm -rf node_modules build
-   │    ├── npm ci
-   │    └── npm run build
-   │
-   └── Backend
-        ├── go clean
-        ├── go mod download
-        ├── go test ./...
-        └── go build
-   ↓
-Docker Build
-   ↓
-Trivy Scan
-   ↓
-ECR Login
-   ↓
-Push Images
-   ↓
-Deploy to EKS
-   ↓
-Update Images
-   ↓
+                    GitHub
+                       |
+                       ↓
+                Clone Repository
+                       |
+             ┌─────────┴─────────┐
+             ↓                   ↓
+      Frontend Build       Backend Build
+        npm ci                go mod
+        npm build             go test
+                             go build
+             └─────────┬─────────┘
+                       ↓
+                Docker Build
+             ┌─────────┴─────────┐
+             ↓                   ↓
+        Frontend Image      Backend Image
+             └─────────┬─────────┘
+                       ↓
+                    ECR Login
+                       ↓
+                 Push to ECR
+                       |
+             ┌─────────┴─────────┐
+             ↓                   ↓
+        Frontend ECR        Backend ECR
+             └─────────┬─────────┘
+                       ↓
+                Terraform Init
+                       ↓
+                Terraform Plan
+                       ↓
+               Terraform Apply
+                       ↓
+                     EKS
+                       ↓
+               kubectl apply
+                       ↓
+             ┌─────────┴─────────┐
+             ↓                   ↓
+       Frontend Pods        Backend Pods
+             │                   │
+             └─────────┬─────────┘
+                       ↓
+                    RDS
 Verify Deployment
 
 
