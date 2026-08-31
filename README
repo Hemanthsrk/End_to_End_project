@@ -1,6 +1,6 @@
 # End_to_End_project
-# Project_Structure
-# Github
+############################################ Project_Structure #################################################################
+############################################ Github ############################################################################
 front-backend/
 │
 ├── frontend/                         # React frontend
@@ -62,3 +62,41 @@ front-backend/
 └── README.md
 
 #
+
+
+
+
+
+
+
+################################# project END ##########################################################
+
+Developer
+    ↓
+GitHub
+    ↓
+Jenkins
+    ↓
+Checkout
+    ↓
+┌───────────────────────┐
+│ Frontend npm ci/test  │
+│ Frontend npm build    │
+│ Backend go test       │
+│ Backend go build      │
+└───────────────────────┘
+    ↓
+Docker Build
+    ↓
+Trivy Scan
+    ↓
+AWS ECR
+    ↓
+EKS
+    ↓
+┌───────────────┐
+│ Frontend Pods │
+│ Backend Pods  │
+└───────────────┘
+    ↓
+AWS RDS
