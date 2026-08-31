@@ -3,30 +3,29 @@
 # Github
 front-backend/
 │
-├── frontend/
-│   ├── public/
-│   ├── src/
-│   ├── .env
-│   ├── .gitignore
-│   ├── package.json
-│   └── package-lock.json
+├── frontend/                         # React frontend
+│   ├── public/                       # Static files
+│   ├── src/                          # React source code
+│   ├── .env                          # Frontend environment variables
+│   ├── .gitignore                    # Git ignored files
+│   ├── package.json                  # Node dependencies/scripts
+│   └── package-lock.json             # Exact dependency versions
 │
-├── backend/
-│   ├── controller/
-│   ├── model/
-│   ├── repository/
-│   ├── routes/
-│   ├── service/
-│   ├── go.mod
-│   ├── go.sum
-│   └── main.go
+├── backend/                          # Go backend/API
+│   ├── controller/                   # HTTP/API controllers
+│   ├── model/                        # Database models
+│   ├── repository/                   # Database operations
+│   ├── routes/                       # API routes
+│   ├── service/                      # Business logic
+│   ├── go.mod                        # Go dependencies
+│   ├── go.sum                        # Dependency checksums
+│   └── main.go                       # Backend entry point
 │
 ├── docker/
 │   ├── frontend/
-│   │   └── Dockerfile
-│   │
+│   │   └── Dockerfile                # Frontend multi-stage image
 │   └── backend/
-│       └── Dockerfile
+│       └── Dockerfile                # Backend multi-stage image
 │
 ├── k8s/
 │   ├── namespace.yaml
@@ -46,8 +45,7 @@ front-backend/
 │   │   ├── service.yaml
 │   │   └── pvc.yaml
 │   │
-│   └── ingress/
-│       └── ingress.yaml
+│   └── ingress.yaml
 │
 ├── terraform/
 │   ├── provider.tf
@@ -61,16 +59,6 @@ front-backend/
 │
 ├── Jenkinsfile
 │
-├── nexus/
-│   └── README.md
-│
-├── scripts/
-│   ├── build.sh
-│   ├── deploy.sh
-│   └── cleanup.sh
-│
-├── README.md
-│
-└── .gitignore
+└── README.md
 
 #
