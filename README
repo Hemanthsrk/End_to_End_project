@@ -57,6 +57,13 @@ front-backend/
 │   ├── iam.tf
 │   └── rds.tf
 │
+│
+├── scripts/
+│   ├── build.sh
+│   ├── docker-build.sh
+│   ├── ecr-push.sh
+│   └── deploy.sh
+│
 ├── Jenkinsfile
 │
 └── README.md
@@ -110,6 +117,53 @@ front-backend/
                     RDS
 Verify Deployment
 
+
+
+############################################# collect your credentials ################################
+
+| Item                      | Where used        | Example                  | Your value                |
+| ------------------------- | ----------------- | ------------------------ | ------------------------- |
+| GitHub username           | GitHub            | `Hemanthsrk`             | Already known             |
+| GitHub repository         | Jenkins           | `front-backend`          | Already known             |
+| GitHub branch             | Jenkins           | `min` or `main`          | **Confirm actual branch** |
+| GitHub Jenkins credential | Jenkins           | `git`                    | Create                    |
+| AWS Account ID            | ECR/Terraform     | `123456789012`           | **Your ID**               |
+| AWS Region                | Terraform/Jenkins | `ap-south-1`             | `ap-south-1`              |
+| AWS IAM credential        | Jenkins           | `aws-prod`               | Create                    |
+| ECR frontend repo         | AWS               | `front-backend-frontend` | Create                    |
+| ECR backend repo          | AWS               | `front-backend-backend`  | Create                    |
+| EKS cluster               | AWS               | `front-backend-cluster`  | Create                    |
+| RDS DB name               | RDS/K8s           | `employees`              | `employees`               |
+| RDS username              | RDS/K8s           | `postgres`               | Choose                    |
+| RDS password              | RDS/K8s           | `********`               | **Your password**         |
+| RDS endpoint              | K8s               | `xxxx.rds.amazonaws.com` | Terraform creates         |
+| Domain                    | Ingress/frontend  | `example.com`            | Optional                  |
+
+
+######################################## Terraform creates #############################################
+
+VPC
+│
+├── Public Subnets
+│
+├── Private Subnets
+│
+├── Internet Gateway
+│
+├── NAT Gateway
+│
+├── Route Tables
+│
+├── EKS
+│   ├── EKS Cluster
+│   └── Worker Nodes
+│
+├── ECR
+│   ├── frontend repository
+│   └── backend repository
+│
+└── RDS
+    └── PostgreSQL
 
 
 
