@@ -1,0 +1,37 @@
+# Environment files
+.env
+*.env
+
+# Secrets
+*.pem
+*.key
+*.crt
+
+# Kubernetes secrets
+k8s/backend/secret.yaml
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+
+# Node
+node_modules/
+frontend/build/
+
+# Go
+backend/server
+
+# Docker
+*.tar
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
