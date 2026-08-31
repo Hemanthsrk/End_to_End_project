@@ -70,52 +70,51 @@ front-backend/
 
 ################################# Jenkins Pipeline Execution #########################################################
 
-                    GitHub
-                       |
-                       ↓
-                Clone Repository
-                       |
-             ┌─────────┴─────────┐
-             ↓                   ↓
-      Frontend Build       Backend Build
-        npm ci                go mod
-        npm build             go test
-                             go build
-             └─────────┬─────────┘
-                       ↓
-                Docker Build
-             ┌─────────┴─────────┐
-             ↓                   ↓
-        Frontend Image      Backend Image
-             └─────────┬─────────┘
-                       ↓
-                    ECR Login
-                       ↓
-                 Push to ECR
-                       |
-             ┌─────────┴─────────┐
-             ↓                   ↓
-        Frontend ECR        Backend ECR
-             └─────────┬─────────┘
-                       ↓
-                Terraform Init
-                       ↓
-                Terraform Plan
-                       ↓
-               Terraform Apply
-                       ↓
-                     EKS
-                       ↓
-               kubectl apply
-                       ↓
-             ┌─────────┴─────────┐
-             ↓                   ↓
-       Frontend Pods        Backend Pods
-             │                   │
-             └─────────┬─────────┘
-                       ↓
-                    RDS
-Verify Deployment
+                         GitHub
+                           |
+                           ↓
+                    Jenkins Webhook
+                           |
+                           ↓
+                  Clone Repository
+                           |
+                           ↓
+              ┌────────────┴────────────┐
+              ↓                         ↓
+        Frontend Build            Backend Build
+        npm ci                    go mod download
+        npm build                 go test
+                                  go build
+              └────────────┬────────────┘
+                           ↓
+                     Docker Build
+                           |
+                ┌──────────┴──────────┐
+                ↓                     ↓
+           Frontend Image        Backend Image
+                └──────────┬──────────┘
+                           ↓
+                       ECR Login
+                           ↓
+                      Push Images
+                           ↓
+                       Terraform
+                           ↓
+                VPC / EKS / ECR / RDS
+                           ↓
+                      Configure EKS
+                           ↓
+                   kubectl apply
+                           ↓
+               ┌───────────┴───────────┐
+               ↓                       ↓
+          Frontend Pods           Backend Pods
+                                       |
+                                       ↓
+                                   PostgreSQL
+                                       |
+                                       ↓
+                                      RDS
 
 
 
