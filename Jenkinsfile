@@ -3,131 +3,70 @@ pipeline {
 
     agent any
 
-    // =========================================================
-    // ENVIRONMENT VARIABLES
-    // =========================================================
     environment {
 
-        // AWS
+        // ==============================
+        // AWS CONFIGURATION
+        // ==============================
         AWS_REGION = 'ap-south-1'
 
-        // AWS Account ID
-        AWS_ACCOUNT_ID = '123456789012'
+        AWS_ACCOUNT_ID = 'YOUR_AWS_ACCOUNT_ID'
 
-        // ECR repositories
+        ECR_REGISTRY = "${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com"
+
         FRONTEND_REPO = 'front-backend-frontend'
         BACKEND_REPO  = 'front-backend-backend'
 
         // Docker image tag
         IMAGE_TAG = "${BUILD_NUMBER}"
 
-        // Kubernetes
-        K8S_NAMESPACE = 'front-backend'
-
-        // EKS cluster
+        // ==============================
+        // EKS CONFIGURATION
+        // ==============================
         EKS_CLUSTER_NAME = 'front-backend-cluster'
 
-        // Kubernetes deployment names
-        FRONTEND_DEPLOYMENT = 'frontend'
-        BACKEND_DEPLOYMENT  = 'backend'
+        K8S_NAMESPACE = 'front-backend'
     }
 
 
-    // =========================================================
-    // PARAMETERS
-    // =========================================================
-    parameters {
-
-        choice(
-            name: 'DEPLOY_ENV',
-            choices: ['dev', 'staging', 'prod'],
-            description: 'Select deployment environment'
-        )
-
-        booleanParam(
-            name: 'RUN_TRIVY_SCAN',
-            defaultValue: true,
-            description: 'Run Trivy vulnerability scan'
-        )
-
-        booleanParam(
-            name: 'DEPLOY_TO_EKS',
-            defaultValue: true,
-            description: 'Deploy application to EKS'
-        )
-    }
-
-
-    // =========================================================
-    // PIPELINE STAGES
-    // =========================================================
     stages {
 
 
-        // =====================================================
-        // 1. CHECKOUT
-        // =====================================================
-        stage('Checkout') {
+        // ============================================
+        // 1. CLONE REPOSITORY
+        // ============================================
+        stage('Clone Repository') {
 
             steps {
 
-                echo "Checking out source code..."
-
-                checkout scm
+                checkout scmGit(
+                    branches: [[name: '*/main']],
+                    extensions: [],
+                    userRemoteConfigs: [[
+                        credentialsId: 'git',
+                        url: 'https://github.com/Hemanthsrk/End_to_End_project.git'
+                    ]]
+                )
             }
         }
 
 
-        // =====================================================
-        // 2. FRONTEND INSTALL
-        // =====================================================
-        stage('Frontend Dependencies') {
-
-            steps {
-
-                dir('frontend') {
-
-                    echo "Installing frontend dependencies..."
-
-                    sh '''
-                        npm ci
-                    '''
-                }
-            }
-        }
-
-
-        // =====================================================
-        // 3. FRONTEND TEST
-        // =====================================================
-        stage('Frontend Test') {
-
-            steps {
-
-                dir('frontend') {
-
-                    echo "Running frontend tests..."
-
-                    sh '''
-                        CI=true npm test -- --watchAll=false
-                    '''
-                }
-            }
-        }
-
-
-        // =====================================================
-        // 4. FRONTEND BUILD
-        // =====================================================
+        // ============================================
+        // 2. FRONTEND BUILD
+        // ============================================
         stage('Frontend Build') {
 
             steps {
 
                 dir('frontend') {
 
-                    echo "Building React application..."
-
                     sh '''
+                        echo "Installing frontend dependencies..."
+
+                        npm ci
+
+                        echo "Building frontend..."
+
                         npm run build
                     '''
                 }
@@ -135,57 +74,26 @@ pipeline {
         }
 
 
-        // =====================================================
-        // 5. BACKEND DEPENDENCIES
-        // =====================================================
-        stage('Backend Dependencies') {
-
-            steps {
-
-                dir('backend') {
-
-                    echo "Downloading Go dependencies..."
-
-                    sh '''
-                        go mod download
-                    '''
-                }
-            }
-        }
-
-
-        // =====================================================
-        // 6. BACKEND TEST
-        // =====================================================
-        stage('Backend Test') {
-
-            steps {
-
-                dir('backend') {
-
-                    echo "Running Go tests..."
-
-                    sh '''
-                        go test ./...
-                    '''
-                }
-            }
-        }
-
-
-        // =====================================================
-        // 7. BACKEND BUILD
-        // =====================================================
+        // ============================================
+        // 3. BACKEND BUILD
+        // ============================================
         stage('Backend Build') {
 
             steps {
 
                 dir('backend') {
 
-                    echo "Building Go application..."
-
                     sh '''
-                        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
+                        echo "Downloading Go dependencies..."
+
+                        go mod download
+
+                        echo "Running Go tests..."
+
+                        go test ./...
+
+                        echo "Building Go application..."
+
                         go build -o server main.go
                     '''
                 }
@@ -193,385 +101,365 @@ pipeline {
         }
 
 
-        // =====================================================
-        // 8. DOCKER LOGIN CHECK
-        // =====================================================
-        stage('Docker Check') {
+        // ============================================
+        // 4. BUILD DOCKER IMAGES
+        // ============================================
+        stage('Build Docker Images') {
 
             steps {
-
-                echo "Checking Docker installation..."
-
-                sh '''
-                    docker --version
-                '''
-            }
-        }
-
-
-        // =====================================================
-        // 9. BUILD FRONTEND DOCKER IMAGE
-        // =====================================================
-        stage('Build Frontend Docker Image') {
-
-            steps {
-
-                echo "Building frontend Docker image..."
 
                 sh """
+                    echo "Building frontend Docker image..."
+
                     docker build \
-                      -t ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG} \
-                      -t ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:latest \
-                      -f docker/frontend/Dockerfile .
+                    -t ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG} \
+                    -t ${ECR_REGISTRY}/${FRONTEND_REPO}:latest \
+                    -f docker/frontend/Dockerfile .
                 """
-            }
-        }
 
-
-        // =====================================================
-        // 10. BUILD BACKEND DOCKER IMAGE
-        // =====================================================
-        stage('Build Backend Docker Image') {
-
-            steps {
-
-                echo "Building backend Docker image..."
 
                 sh """
+                    echo "Building backend Docker image..."
+
                     docker build \
-                      -t ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG} \
-                      -t ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:latest \
-                      -f docker/backend/Dockerfile .
+                    -t ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG} \
+                    -t ${ECR_REGISTRY}/${BACKEND_REPO}:latest \
+                    -f docker/backend/Dockerfile .
                 """
             }
         }
 
 
-        // =====================================================
-        // 11. TRIVY SCAN
-        // =====================================================
-        stage('Trivy Security Scan') {
-
-            when {
-                expression {
-                    return params.RUN_TRIVY_SCAN
-                }
-            }
-
-            steps {
-
-                echo "Scanning Docker images with Trivy..."
-
-                sh """
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG}
-                """
-
-                sh """
-                    trivy image \
-                      --severity HIGH,CRITICAL \
-                      --exit-code 1 \
-                      ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG}
-                """
-            }
-        }
-
-
-        // =====================================================
-        // 12. AWS ECR LOGIN
-        // =====================================================
+        // ============================================
+        // 5. ECR LOGIN
+        // ============================================
         stage('ECR Login') {
 
             steps {
 
-                echo "Logging into Amazon ECR..."
-
                 sh """
+                    echo "Logging into Amazon ECR..."
+
                     aws ecr get-login-password \
-                    --region ${AWS_REGION} |
+                    --region ${AWS_REGION} | \
                     docker login \
                     --username AWS \
-                    --password-stdin \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com
+                    --password-stdin ${ECR_REGISTRY}
                 """
             }
         }
 
 
-        // =====================================================
-        // 13. PUSH FRONTEND IMAGE
-        // =====================================================
-        stage('Push Frontend Image') {
+        // ============================================
+        // 6. PUSH DOCKER IMAGES
+        // ============================================
+        stage('Push Docker Images') {
 
             steps {
 
-                echo "Pushing frontend image to ECR..."
-
                 sh """
+                    echo "Pushing frontend image..."
+
                     docker push \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG}
+                    ${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG}
+
+                    docker push \
+                    ${ECR_REGISTRY}/${FRONTEND_REPO}:latest
                 """
 
+
                 sh """
+                    echo "Pushing backend image..."
+
                     docker push \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:latest
+                    ${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG}
+
+                    docker push \
+                    ${ECR_REGISTRY}/${BACKEND_REPO}:latest
                 """
             }
         }
 
 
-        // =====================================================
-        // 14. PUSH BACKEND IMAGE
-        // =====================================================
-        stage('Push Backend Image') {
+        // ============================================
+        // 7. TERRAFORM INIT
+        // ============================================
+        stage('Terraform Init') {
 
             steps {
 
-                echo "Pushing backend image to ECR..."
+                dir('terraform') {
 
-                sh """
-                    docker push \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG}
-                """
+                    sh '''
+                        echo "Initializing Terraform..."
 
-                sh """
-                    docker push \
-                    ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:latest
-                """
-            }
-        }
-
-
-        // =====================================================
-        // 15. CONFIGURE KUBECTL
-        // =====================================================
-        stage('Configure Kubernetes') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
+                        terraform init
+                    '''
                 }
             }
+        }
+
+
+        // ============================================
+        // 8. TERRAFORM VALIDATE
+        // ============================================
+        stage('Terraform Validate') {
 
             steps {
 
-                echo "Configuring kubectl for EKS..."
+                dir('terraform') {
+
+                    sh '''
+                        echo "Validating Terraform..."
+
+                        terraform validate
+                    '''
+                }
+            }
+        }
+
+
+        // ============================================
+        // 9. TERRAFORM PLAN
+        // ============================================
+        stage('Terraform Plan') {
+
+            steps {
+
+                dir('terraform') {
+
+                    sh '''
+                        echo "Creating Terraform plan..."
+
+                        terraform plan
+                    '''
+                }
+            }
+        }
+
+
+        // ============================================
+        // 10. TERRAFORM APPLY
+        // ============================================
+        stage('Deploy using Terraform') {
+
+            steps {
+
+                dir('terraform') {
+
+                    sh '''
+                        echo "Deploying AWS infrastructure..."
+
+                        terraform apply -auto-approve
+                    '''
+                }
+            }
+        }
+
+
+        // ============================================
+        // 11. CONFIGURE EKS
+        // ============================================
+        stage('Configure EKS') {
+
+            steps {
 
                 sh """
+                    echo "Configuring kubectl..."
+
                     aws eks update-kubeconfig \
                     --region ${AWS_REGION} \
                     --name ${EKS_CLUSTER_NAME}
                 """
 
                 sh '''
+                    echo "Checking EKS nodes..."
+
                     kubectl get nodes
                 '''
             }
         }
 
 
-        // =====================================================
-        // 16. UPDATE FRONTEND IMAGE
-        // =====================================================
-        stage('Deploy Frontend') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
-                }
-            }
+        // ============================================
+        // 12. APPLY KUBERNETES MANIFESTS
+        // ============================================
+        stage('Deploy to Kubernetes') {
 
             steps {
-
-                echo "Deploying frontend to Kubernetes..."
-
-                sh """
-                    kubectl set image deployment/${FRONTEND_DEPLOYMENT} \
-                    frontend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG} \
-                    -n ${K8S_NAMESPACE}
-                """
-            }
-        }
-
-
-        // =====================================================
-        // 17. UPDATE BACKEND IMAGE
-        // =====================================================
-        stage('Deploy Backend') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
-                }
-            }
-
-            steps {
-
-                echo "Deploying backend to Kubernetes..."
-
-                sh """
-                    kubectl set image deployment/${BACKEND_DEPLOYMENT} \
-                    backend=${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG} \
-                    -n ${K8S_NAMESPACE}
-                """
-            }
-        }
-
-
-        // =====================================================
-        // 18. APPLY KUBERNETES CONFIGURATION
-        // =====================================================
-        stage('Apply Kubernetes Manifests') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
-                }
-            }
-
-            steps {
-
-                echo "Applying Kubernetes manifests..."
 
                 sh '''
-                    kubectl apply -f k8s/namespace.yaml
+                    echo "Creating namespace..."
 
-                    kubectl apply -f k8s/backend/configmap.yaml
-                    kubectl apply -f k8s/backend/secret.yaml
-                    kubectl apply -f k8s/backend/service.yaml
+                    kubectl apply \
+                    -f k8s/namespace.yaml
 
-                    kubectl apply -f k8s/frontend/service.yaml
 
-                    kubectl apply -f k8s/ingress.yaml
+                    echo "Deploying backend configuration..."
+
+                    kubectl apply \
+                    -f k8s/backend/configmap.yaml
+
+                    kubectl apply \
+                    -f k8s/backend/secret.yaml
+
+
+                    echo "Deploying backend..."
+
+                    kubectl apply \
+                    -f k8s/backend/deployment.yaml
+
+                    kubectl apply \
+                    -f k8s/backend/service.yaml
+
+
+                    echo "Deploying frontend..."
+
+                    kubectl apply \
+                    -f k8s/frontend/deployment.yaml
+
+                    kubectl apply \
+                    -f k8s/frontend/service.yaml
+
+
+                    echo "Deploying ingress..."
+
+                    kubectl apply \
+                    -f k8s/ingress.yaml
                 '''
             }
         }
 
 
-        // =====================================================
-        // 19. ROLLOUT STATUS
-        // =====================================================
-        stage('Verify Deployment') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
-                }
-            }
+        // ============================================
+        // 13. UPDATE FRONTEND IMAGE
+        // ============================================
+        stage('Update Frontend Image') {
 
             steps {
 
-                echo "Checking frontend deployment..."
-
                 sh """
-                    kubectl rollout status \
-                    deployment/${FRONTEND_DEPLOYMENT} \
-                    -n ${K8S_NAMESPACE} \
-                    --timeout=180s
-                """
-
-                echo "Checking backend deployment..."
-
-                sh """
-                    kubectl rollout status \
-                    deployment/${BACKEND_DEPLOYMENT} \
-                    -n ${K8S_NAMESPACE} \
-                    --timeout=180s
+                    kubectl set image deployment/frontend \
+                    frontend=${ECR_REGISTRY}/${FRONTEND_REPO}:${IMAGE_TAG} \
+                    -n ${K8S_NAMESPACE}
                 """
             }
         }
 
 
-        // =====================================================
-        // 20. KUBERNETES STATUS
-        // =====================================================
-        stage('Kubernetes Status') {
-
-            when {
-                expression {
-                    return params.DEPLOY_TO_EKS
-                }
-            }
+        // ============================================
+        // 14. UPDATE BACKEND IMAGE
+        // ============================================
+        stage('Update Backend Image') {
 
             steps {
 
                 sh """
-                    kubectl get pods \
-                    -n ${K8S_NAMESPACE} \
-                    -o wide
+                    kubectl set image deployment/backend \
+                    backend=${ECR_REGISTRY}/${BACKEND_REPO}:${IMAGE_TAG} \
+                    -n ${K8S_NAMESPACE}
                 """
+            }
+        }
+
+
+        // ============================================
+        // 15. VERIFY DEPLOYMENT
+        // ============================================
+        stage('Verify Deployment') {
+
+            steps {
 
                 sh """
-                    kubectl get services \
+                    echo "Checking pods..."
+
+                    kubectl get pods \
                     -n ${K8S_NAMESPACE}
                 """
 
+
                 sh """
+                    echo "Checking services..."
+
+                    kubectl get svc \
+                    -n ${K8S_NAMESPACE}
+                """
+
+
+                sh """
+                    echo "Checking ingress..."
+
                     kubectl get ingress \
                     -n ${K8S_NAMESPACE}
+                """
+
+
+                sh """
+                    echo "Waiting for frontend deployment..."
+
+                    kubectl rollout status \
+                    deployment/frontend \
+                    -n ${K8S_NAMESPACE} \
+                    --timeout=180s
+                """
+
+
+                sh """
+                    echo "Waiting for backend deployment..."
+
+                    kubectl rollout status \
+                    deployment/backend \
+                    -n ${K8S_NAMESPACE} \
+                    --timeout=180s
                 """
             }
         }
     }
 
 
-    // =========================================================
+    // ============================================
     // POST ACTIONS
-    // =========================================================
+    // ============================================
     post {
 
         success {
 
-            echo """
+            echo '''
             ==========================================
-            PIPELINE SUCCESS
+                    PIPELINE SUCCESS
             ==========================================
 
-            Build Number : ${BUILD_NUMBER}
-            Environment  : ${params.DEPLOY_ENV}
-
-            Frontend Image:
-            ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${FRONTEND_REPO}:${IMAGE_TAG}
-
-            Backend Image:
-            ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${BACKEND_REPO}:${IMAGE_TAG}
-
-            Kubernetes Namespace:
-            ${K8S_NAMESPACE}
+            Frontend image pushed successfully.
+            Backend image pushed successfully.
+            Terraform deployment completed.
+            Kubernetes deployment completed.
 
             ==========================================
-            """
+            '''
         }
 
 
         failure {
 
-            echo """
+            echo '''
             ==========================================
-            PIPELINE FAILED
+                    PIPELINE FAILED
             ==========================================
 
-            Build Number : ${BUILD_NUMBER}
-            Environment  : ${params.DEPLOY_ENV}
-
-            Check Jenkins console logs.
+            Please check the Jenkins console logs.
 
             ==========================================
-            """
+            '''
         }
 
 
         always {
 
-            echo "Cleaning Docker images..."
+            echo 'Cleaning unused Docker images...'
 
-            sh """
+            sh '''
                 docker image prune -f || true
-            """
+            '''
         }
     }
 }
-```
-
