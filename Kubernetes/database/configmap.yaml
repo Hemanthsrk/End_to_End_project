@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: backend-config
+  namespace: front-backend
+
+data:
+  DB_NAME: "employees"
+  DB_PORT: "5432"
+  ALLOWED_ORIGINS: "*"
